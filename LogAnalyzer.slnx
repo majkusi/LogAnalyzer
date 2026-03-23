@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="LogAnalyzer.Api/LogAnalyzer.Api.csproj" />
+  <Project Path="LogAnalyzer.Core/LogAnalyzer.Core.csproj" />
+  <Project Path="LogAnalyzer.Infrastructure/LogAnalyzer.Infrastructure.csproj" />
+  <Project Path="LogAnalyzer.Tests/LogAnalyzer.Tests.csproj" />
+</Solution>
