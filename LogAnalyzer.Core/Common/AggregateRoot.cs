@@ -2,7 +2,7 @@
 {
     public abstract class AggregateRoot : BaseAuditableEntity
     {
-        public Guid Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
         public readonly List<IDomainEvent> _domainEvents = new();
 
         public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
