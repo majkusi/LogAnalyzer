@@ -6,7 +6,7 @@ namespace LogAnalyzer.Core.Entities.LogGroupAggregate
 {
     public sealed class LogGroup : AggregateRoot
     {
-        public LogMessage? message { get; private set; }
+        public LogMessage message { get; private set; }
         public int count { get; private set; }
         public DateTime firstOccurence { get; private set; }
         public DateTime lastOccurence { get; private set; }
@@ -16,7 +16,7 @@ namespace LogAnalyzer.Core.Entities.LogGroupAggregate
         private LogGroup() { }
         private LogGroup(LogMessage message, int count, DateTime firstOccurence, DateTime lastOccurence, List<Guid> logs)
         {
-            this.message = message;
+            this.message = message ?? throw new ArgumentNullException(nameof(message));
             this.count = count;
             this.firstOccurence = firstOccurence;
             this.lastOccurence = lastOccurence;
@@ -41,7 +41,7 @@ namespace LogAnalyzer.Core.Entities.LogGroupAggregate
         {
             if (logId == Guid.Empty)
                 throw new ArgumentNullException(nameof(logId));
-            if (message != this.message)
+            if (message.Message != this.message.Message)
                 throw new ArgumentException("Log message does not match LogGroup message!");
 
             this.lastOccurence = timestamp;
