@@ -1,35 +1,54 @@
 ﻿using LogAnalyzer.Core.Common;
 using LogAnalyzer.Core.Entities.LogEntryAggregate;
+using LogAnalyzer.Core.Events;
 
 namespace LogAnalyzer.Core.Entities.LogGroupAggregate
 {
     public sealed class LogGroup : AggregateRoot
     {
-        public LogMessage? message { get; set; }
-        public int count { get; set; }
-        public DateTime firstOccurence { get; set; }
-        public DateTime lastOccurence { get; set; }
-        public IEnumerable<LogEntry> logs { get; set; } = Enumerable.Empty<LogEntry>();
+        public LogMessage? message { get; private set; }
+        public int count { get; private set; }
+        public DateTime firstOccurence { get; private set; }
+        public DateTime lastOccurence { get; private set; }
+        public IReadOnlyCollection<Guid> Logs => _logs.AsReadOnly();
+        private List<Guid> _logs { get; set; }
 
-        public LogGroup() { }
-        public LogGroup(LogMessage? message, int count, DateTime firstOccurence, DateTime lastOccurence, IEnumerable<LogEntry> logs)
+        private LogGroup() { }
+        private LogGroup(LogMessage message, int count, DateTime firstOccurence, DateTime lastOccurence, List<Guid> logs)
         {
             this.message = message;
             this.count = count;
             this.firstOccurence = firstOccurence;
             this.lastOccurence = lastOccurence;
-            this.logs = logs;
+            this._logs = logs ?? new List<Guid>();
         }
 
-        public void AddLog(LogEntry log)
+        public static Result<LogGroup> Create(
+            LogMessage message,
+            Guid firstLogId,
+            DateTime timestamp)
         {
-            if (log is null)
-                throw new ArgumentNullException(nameof(log));
-            if (log.Message != message)
+            List<Guid> firstLogList = new List<Guid>();
+            firstLogList.Add(firstLogId);
+            var logGroup = new LogGroup(message, 1, timestamp, timestamp, firstLogList);
+
+            logGroup.RaiseDomainEvent(new LogGroupCreatedEvent(logGroup.Id));
+
+            return Result<LogGroup>.Success(logGroup);
+        }
+
+        public void AddLog(Guid logId, LogMessage message, DateTime timestamp)
+        {
+            if (logId == Guid.Empty)
+                throw new ArgumentNullException(nameof(logId));
+            if (message != this.message)
                 throw new ArgumentException("Log message does not match LogGroup message!");
-            lastOccurence = DateTime.Now;
-            count++;
-            logs.Append(log);
+
+            this.lastOccurence = timestamp;
+            this.count++;
+
+            this.RaiseDomainEvent(new LogAddedToLogGroupEvent(logId, this.Id));
+            this._logs.Add(logId);
         }
     }
 }
