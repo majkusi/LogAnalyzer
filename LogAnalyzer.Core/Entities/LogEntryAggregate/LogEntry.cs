@@ -43,5 +43,22 @@ namespace LogAnalyzer.Core.Entities.LogEntryAggregate
             logEntry.RaiseDomainEvent(new LogEntryCreatedEvent(logEntry.Id));
             return Result<LogEntry>.Success(logEntry);
         }
+
+        public Result<LogEntry> AppendStackTraceLine(string line)
+        {
+            if (string.IsNullOrEmpty(line))
+                return Result<LogEntry>.Failure("Stack trace line cannot be empty");
+
+            if (string.IsNullOrEmpty(StackTrace))
+            {
+                StackTrace = line;
+            }
+            else
+            {
+                StackTrace += Environment.NewLine + line;
+            }
+
+            return Result<LogEntry>.Success(this);
+        }
     }
 }
