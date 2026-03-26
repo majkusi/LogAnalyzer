@@ -28,6 +28,13 @@ namespace LogAnalyzer.Core.Entities.LogGroupAggregate
             Guid firstLogId,
             DateTime timestamp)
         {
+            if (message is null)
+                return Result<LogGroup>.Failure("Message is null!");
+            if (firstLogId == Guid.Empty)
+                return Result<LogGroup>.Failure("FirstLogId is null or empty");
+            if (String.IsNullOrEmpty(timestamp.ToString()))
+                return Result<LogGroup>.Failure("Timestamp is null or empty!");
+
             List<Guid> firstLogList = new List<Guid>();
             firstLogList.Add(firstLogId);
             var logGroup = new LogGroup(message, 1, timestamp, timestamp, firstLogList);
