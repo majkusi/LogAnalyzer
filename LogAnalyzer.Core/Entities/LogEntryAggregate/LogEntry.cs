@@ -35,7 +35,7 @@ namespace LogAnalyzer.Core.Entities.LogEntryAggregate
                 return Result<LogEntry>.Failure("Inappropiate Log Level value");
             if (message is null)
                 return Result<LogEntry>.Failure("Message is null or empty");
-            if (source is null)
+            if (source is null || String.IsNullOrEmpty(source))
                 return Result<LogEntry>.Failure("Log Source is null or empty");
 
 
