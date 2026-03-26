@@ -41,5 +41,16 @@
 
             return hash.ToHashCode();
         }
+        public static bool operator ==(ValueObject? left, ValueObject? right)
+        {
+            if (ReferenceEquals(left, null) && ReferenceEquals(right, null)) return true;
+            if (ReferenceEquals(left, null) || ReferenceEquals(right, null)) return false;
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(ValueObject? left, ValueObject? right)
+        {
+            return !(left == right);
+        }
     }
 }
