@@ -1,6 +1,7 @@
 ﻿using LogAnalyzer.Core.Common;
 using LogAnalyzer.Core.Entities.Enums;
 using LogAnalyzer.Core.Entities.LogEntryAggregate;
+using LogAnalyzer.Core.Entities.LogGroupAggregate;
 using System.Text.RegularExpressions;
 
 namespace LogAnalyzer.Core.Services
@@ -19,21 +20,35 @@ namespace LogAnalyzer.Core.Services
         {
             if (!File.Exists(logsFilePath)) return;
 
+            var matchLogRegex = LogRegex.Match(File.ReadLines(logsFilePath).FirstOrDefault() ?? string.Empty);
+
             var lines = File.ReadLines(logsFilePath);
 
             foreach (var line in lines)
             {
+                if (LogRegex.Match(line).Success)
+                {
+                    var logEntry = ParseFirstLogLine(line);
 
+                    if(logEntry.Message == null || logEntry.Id == Guid.Empty)
+                        throw new InvalidOperationException("LogEntry message or Id is null or empty!");
+
+                    var logGroup = LogGroup.Create(logEntry.Message, logEntry.Id,logEntry.TimeStamp);
+                }
+                if (StackTraceRegex.Match(line).Success)
+                {
+                    var updatedLogEntry = StackTraceParseLine(, line);
+                }
             }
 
         }
 
 
-        private Result<LogEntry> ParseFirstLogLine(string line)
+        private LogEntry ParseFirstLogLine(string line)
         {
             var match = LogRegex.Match(line);
             if (!match.Success)
-                return Result<LogEntry>.Failure("Line format is invalid");
+                throw new ArgumentException("Line format is invalid", nameof(line));
 
             var logEntry = CreateLogEntryHelper(match);
 
@@ -41,52 +56,55 @@ namespace LogAnalyzer.Core.Services
 
         }
 
-        private Result<LogEntry> StackTraceParseLine(LogEntry logEntry, string line)
+        private LogEntry StackTraceParseLine(LogEntry logEntry, string line)
         {
             var match = StackTraceRegex.Match(line);
             if (!match.Success)
-                return Result<LogEntry>.Failure("StackTrace line not recognized by regex");
+                throw new ArgumentException("StackTrace line not recognized by regex");
 
             var stackTraceMessage = match.Groups["line"].Value;
 
             return logEntry.AppendStackTraceLine(line);
         }
 
-        private Result<LogEntry> CreateLogEntryHelper(Match match)
-        {
+        private LogEntry CreateLogEntryHelper(Match match)
+        {   
             var timestamp = DateTime.Parse(match.Groups["timestamp"].Value);
             var level = match.Groups["level"].Value;
             var source = match.Groups["source"].Value;
             var logMessageFromFile = match.Groups["message"].Value;
 
             if (String.IsNullOrEmpty(timestamp.ToString()))
-                return Result<LogEntry>.Failure("Timestamp is null or empty!");
+                throw new InvalidOperationException("Timestamp is null or empty!");
 
             if (level is null)
-                return Result<LogEntry>.Failure("Level is null or empty!");
+                throw new InvalidOperationException("Level is null or empty!");
 
             if (source is null)
-                return Result<LogEntry>.Failure("Source is null or empty!");
+                throw new InvalidOperationException("Source is null or empty!");
 
             if (logMessageFromFile is null)
-                return Result<LogEntry>.Failure("Source is null or empty!");
+                throw new InvalidOperationException("Source is null or empty!");
 
-            var message = LogMessage.Create(logMessageFromFile).Value;
+
+            var messageResult = LogMessage.Create(logMessageFromFile);
+            if (messageResult == null || !messageResult.IsSuccess || messageResult.Value == null)
+                throw new InvalidOperationException(messageResult?.Error ?? "LogMessage creation failed");
+            var message = messageResult.Value;
 
             if (message is null)
-                return Result<LogEntry>.Failure("LogEntry is null or empty!");
+                throw new InvalidOperationException("LogEntry is null or empty!");
 
             LogLevelEnum parsedEnumLevel = (LogLevelEnum)Enum.Parse(typeof(LogLevelEnum), level, true);
 
             if (String.IsNullOrEmpty(parsedEnumLevel.ToString()))
-                return Result<LogEntry>.Failure("Parsed enum is null or empty!");
+                throw new InvalidOperationException("Parsed enum is null or empty!");
 
+            var logEntryResult = LogEntry.Create(message, string.Empty, source, parsedEnumLevel);
+            if (logEntryResult == null || !logEntryResult.IsSuccess || logEntryResult.Value == null)
+                throw new InvalidOperationException(logEntryResult?.Error ?? "LogEntry is null or empty!");
 
-            var logEntry = LogEntry.Create(message, string.Empty, source, parsedEnumLevel).Value;
-            if (logEntry != null)
-                return Result<LogEntry>.Success(logEntry);
-            else
-                return Result<LogEntry>.Failure("LogEntry is null or empty!");
+            return logEntryResult.Value;
         }
 
     }

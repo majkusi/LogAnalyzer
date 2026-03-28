@@ -44,10 +44,10 @@ namespace LogAnalyzer.Core.Entities.LogEntryAggregate
             return Result<LogEntry>.Success(logEntry);
         }
 
-        public Result<LogEntry> AppendStackTraceLine(string line)
+        public LogEntry AppendStackTraceLine(string line)
         {
             if (string.IsNullOrEmpty(line))
-                return Result<LogEntry>.Failure("Stack trace line cannot be empty");
+                throw new ArgumentException("Stack trace line cannot be empty");
 
             if (string.IsNullOrEmpty(StackTrace))
             {
@@ -58,7 +58,7 @@ namespace LogAnalyzer.Core.Entities.LogEntryAggregate
                 StackTrace += Environment.NewLine + line;
             }
 
-            return Result<LogEntry>.Success(this);
+            return this;
         }
     }
 }
