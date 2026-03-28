@@ -16,34 +16,42 @@ namespace LogAnalyzer.Core.Services
         @"^\s+at\s+(?<method>.*)\s+in\s+(?<file>.*?):line\s+(?<line>\d+)$",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
-        bool isCollectingNewStackTraceBlock = false;
         public void ParseLogs(string logsFilePath)
         {
-            if (!File.Exists(logsFilePath)) return;
+            if (!File.Exists(logsFilePath)) 
+                throw new ArgumentException("Log file path is incorrect or file does not exist!");
 
-            var matchLogRegex = LogRegex.Match(File.ReadLines(logsFilePath).FirstOrDefault() ?? string.Empty);
-
-            var lines = File.ReadLines(logsFilePath);
-
+            bool isCollectingNewStackTraceBlock = false;
+            var logFile = File.ReadLines(logsFilePath);
+            List<LogEntry> listOfLogEntries = new List<LogEntry>();
             var newLogEntry = new LogEntry();
 
-            foreach (var line in lines)
+            foreach (var line in logFile)
             {
                 if (LogRegex.Match(line).Success)
                 {
+                    if(newLogEntry.Message != null)
+                    {
+                        listOfLogEntries.Add(newLogEntry);
+                    }
+
                     newLogEntry = ParseFirstLogLine(line);
                     isCollectingNewStackTraceBlock = true;
                 }
                 else if (isCollectingNewStackTraceBlock && StackTraceRegex.Match(line).Success)
                 {
-                    var stackTrace = StackTraceParseLine(newLogEntry, line);
+                    StackTraceParseLine(newLogEntry, line);
                 }
                 else
                 {
-                    
-                    isCollectingNewStackTraceBlock = false;
-                    newLogEntry = new LogEntry();
+                   throw new InvalidOperationException($"Line format is invalid and does not match either log entry or stack trace patterns: {line}");
                 }
+            }
+
+            // Add the last log entry if the file ended while we were still collecting a stack trace block
+            if (newLogEntry.Message != null)
+            {
+                listOfLogEntries.Add(newLogEntry);
             }
 
         }
@@ -61,7 +69,7 @@ namespace LogAnalyzer.Core.Services
 
         }
 
-        private LogEntry StackTraceParseLine(LogEntry logEntry, string line)
+        private void StackTraceParseLine(LogEntry logEntry, string line)
         {
             var match = StackTraceRegex.Match(line);
             if (!match.Success)
@@ -69,7 +77,7 @@ namespace LogAnalyzer.Core.Services
 
             var stackTraceMessage = match.Groups["line"].Value;
 
-            return logEntry.AppendStackTraceLine(line);
+            logEntry.AppendStackTraceLine(stackTraceMessage);
         }
 
         private LogEntry CreateLogEntryHelper(Match match)

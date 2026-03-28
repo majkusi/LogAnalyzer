@@ -1,6 +1,8 @@
 ﻿using LogAnalyzer.Core.Common;
 using LogAnalyzer.Core.Entities.Enums;
 using LogAnalyzer.Core.Events;
+using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace LogAnalyzer.Core.Entities.LogEntryAggregate
 
@@ -44,10 +46,9 @@ namespace LogAnalyzer.Core.Entities.LogEntryAggregate
             return Result<LogEntry>.Success(logEntry);
         }
 
-        public LogEntry AppendStackTraceLine(string line)
+        public void AppendStackTraceLine(string line)
         {
-            if (string.IsNullOrEmpty(line))
-                throw new ArgumentException("Stack trace line cannot be empty");
+            if (string.IsNullOrWhiteSpace(line)) return;
 
             if (string.IsNullOrEmpty(StackTrace))
             {
@@ -57,8 +58,6 @@ namespace LogAnalyzer.Core.Entities.LogEntryAggregate
             {
                 StackTrace += Environment.NewLine + line;
             }
-
-            return this;
         }
     }
 }
