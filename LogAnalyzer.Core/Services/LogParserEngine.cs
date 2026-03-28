@@ -16,6 +16,7 @@ namespace LogAnalyzer.Core.Services
         @"^\s+at\s+(?<method>.*)\s+in\s+(?<file>.*?):line\s+(?<line>\d+)$",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
+        bool isCollectingNewStackTraceBlock = false;
         public void ParseLogs(string logsFilePath)
         {
             if (!File.Exists(logsFilePath)) return;
@@ -24,20 +25,24 @@ namespace LogAnalyzer.Core.Services
 
             var lines = File.ReadLines(logsFilePath);
 
+            var newLogEntry = new LogEntry();
+
             foreach (var line in lines)
             {
                 if (LogRegex.Match(line).Success)
                 {
-                    var logEntry = ParseFirstLogLine(line);
-
-                    if(logEntry.Message == null || logEntry.Id == Guid.Empty)
-                        throw new InvalidOperationException("LogEntry message or Id is null or empty!");
-
-                    var logGroup = LogGroup.Create(logEntry.Message, logEntry.Id,logEntry.TimeStamp);
+                    newLogEntry = ParseFirstLogLine(line);
+                    isCollectingNewStackTraceBlock = true;
                 }
-                if (StackTraceRegex.Match(line).Success)
+                else if (isCollectingNewStackTraceBlock && StackTraceRegex.Match(line).Success)
                 {
-                    var updatedLogEntry = StackTraceParseLine(, line);
+                    var stackTrace = StackTraceParseLine(newLogEntry, line);
+                }
+                else
+                {
+                    
+                    isCollectingNewStackTraceBlock = false;
+                    newLogEntry = new LogEntry();
                 }
             }
 
