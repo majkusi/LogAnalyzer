@@ -1,6 +1,8 @@
 ﻿using LogAnalyzer.Core.Common;
 using LogAnalyzer.Core.Entities.Enums;
 using LogAnalyzer.Core.Events;
+using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace LogAnalyzer.Core.Entities.LogEntryAggregate
 
@@ -42,6 +44,20 @@ namespace LogAnalyzer.Core.Entities.LogEntryAggregate
             var logEntry = new LogEntry(timeStamp, logLevel, message, stackTrace, source);
             logEntry.RaiseDomainEvent(new LogEntryCreatedEvent(logEntry.Id));
             return Result<LogEntry>.Success(logEntry);
+        }
+
+        public void AppendStackTraceLine(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line)) return;
+
+            if (string.IsNullOrEmpty(StackTrace))
+            {
+                StackTrace = line;
+            }
+            else
+            {
+                StackTrace += Environment.NewLine + line;
+            }
         }
     }
 }
