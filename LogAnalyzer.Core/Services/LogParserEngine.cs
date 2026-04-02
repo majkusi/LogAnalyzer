@@ -1,7 +1,5 @@
-﻿using LogAnalyzer.Core.Common;
-using LogAnalyzer.Core.Entities.Enums;
+﻿using LogAnalyzer.Core.Entities.Enums;
 using LogAnalyzer.Core.Entities.LogEntryAggregate;
-using LogAnalyzer.Core.Entities.LogGroupAggregate;
 using System.Text.RegularExpressions;
 
 namespace LogAnalyzer.Core.Services
@@ -16,9 +14,9 @@ namespace LogAnalyzer.Core.Services
         @"^\s+at\s+(?<method>.*)\s+in\s+(?<file>.*?):line\s+(?<line>\d+)$",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
-        public void ParseLogs(string logsFilePath)
+        public List<LogEntry> ParseLogs(string logsFilePath)
         {
-            if (!File.Exists(logsFilePath)) 
+            if (!File.Exists(logsFilePath))
                 throw new ArgumentException("Log file path is incorrect or file does not exist!");
 
             bool isCollectingNewStackTraceBlock = false;
@@ -26,36 +24,44 @@ namespace LogAnalyzer.Core.Services
             List<LogEntry> listOfLogEntries = new List<LogEntry>();
             var newLogEntry = new LogEntry();
 
+            FileParserHelper(ref isCollectingNewStackTraceBlock, logFile, listOfLogEntries, ref newLogEntry);
+            if (newLogEntry.Message != null)
+            {
+                listOfLogEntries.Add(newLogEntry);
+            }
+            return listOfLogEntries;
+        }
+
+        private void FileParserHelper(ref bool isCollectingNewStackTraceBlock, IEnumerable<string> logFile, List<LogEntry> listOfLogEntries, ref LogEntry newLogEntry)
+        {
             foreach (var line in logFile)
             {
-                if (LogRegex.Match(line).Success)
+                if (string.IsNullOrEmpty(line)) continue;
+
+                var logMatch = LogRegex.Match(line);
+                if (logMatch.Success)
                 {
-                    if(newLogEntry.Message != null)
+                    if (newLogEntry.Message != null)
                     {
                         listOfLogEntries.Add(newLogEntry);
                     }
 
                     newLogEntry = ParseFirstLogLine(line);
                     isCollectingNewStackTraceBlock = true;
+                    continue;
                 }
-                else if (isCollectingNewStackTraceBlock && StackTraceRegex.Match(line).Success)
+
+                var stackMatch = StackTraceRegex.Match(line);
+                if (isCollectingNewStackTraceBlock && stackMatch.Success)
                 {
-                    StackTraceParseLine(newLogEntry, line);
+                    newLogEntry.AppendStackTraceLine(stackMatch.Groups["line"].Value);
                 }
                 else
                 {
-                   throw new InvalidOperationException($"Line format is invalid and does not match either log entry or stack trace patterns: {line}");
+                    throw new InvalidOperationException($"Line format is invalid and does not match either log entry or stack trace patterns: {line}");
                 }
             }
-
-            // Add the last log entry if the file ended while we were still collecting a stack trace block
-            if (newLogEntry.Message != null)
-            {
-                listOfLogEntries.Add(newLogEntry);
-            }
-
         }
-
 
         private LogEntry ParseFirstLogLine(string line)
         {
@@ -81,7 +87,7 @@ namespace LogAnalyzer.Core.Services
         }
 
         private LogEntry CreateLogEntryHelper(Match match)
-        {   
+        {
             var timestamp = DateTime.Parse(match.Groups["timestamp"].Value);
             var level = match.Groups["level"].Value;
             var source = match.Groups["source"].Value;
