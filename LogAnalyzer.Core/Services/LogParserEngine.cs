@@ -75,17 +75,6 @@ namespace LogAnalyzer.Core.Services
 
         }
 
-        private void StackTraceParseLine(LogEntry logEntry, string line)
-        {
-            var match = StackTraceRegex.Match(line);
-            if (!match.Success)
-                throw new ArgumentException("StackTrace line not recognized by regex");
-
-            var stackTraceMessage = match.Groups["line"].Value;
-
-            logEntry.AppendStackTraceLine(stackTraceMessage);
-        }
-
         private LogEntry CreateLogEntryHelper(Match match)
         {
             var timestamp = DateTime.Parse(match.Groups["timestamp"].Value);
